@@ -1,44 +1,65 @@
-from ..models.animal import Animal
+from ..models.animal import Animal, AnimalSchema
 from flask import Blueprint, request, redirect
 import json
 from ..extensions import db
 
-animal = Blueprint("animals", __name__)
+animals = Blueprint("animals", __name__)
 
 
-@animal.route('/', methods=['POST', 'GET'])
+@animals.route('/', methods=['GET'])
 def index():
+    if request.method == 'GET':
+        animals_list = Animal.query.all()
+        animals_schema = AnimalSchema(many=True)
+        data = animals_schema.dump(animals_list)
+        return json.dumps(data)
+
+
+@animals.route('/available', methods=['POST'])
+def add_animal():
     if request.method == "POST":
         data = request.json
-        new_animal = Animal(name=data.get("name"), type=data.get("type"), desc=data.get("desc"), age=data.get("age"))
-
+        animal = Animal(name=data.get("name"), type=data.get("type"), desc=data.get("desc"), age=data.get("age"), adopted=data.get("adopted"))
         try:
-            db.session.add(new_animal)
+            db.session.add(animal)
             db.session.commit()
-            return json.dumps(new_animal.serialize())
+            return json.dumps(AnimalSchema().dump(animal))
         except:
             return 'Issue adding animal'
 
-    else:
-        tasks = Animal.query.all()
-        json_tasks = [e.serialize() for e in tasks]
-        return json.dumps(json_tasks)
+
+@animals.route('/available', methods=['GET'])
+def get_available_animals():
+    if request.method == 'GET':
+        animals_list = Animal.query.filter(Animal.adopted.is_(None))
+        animals_schema = AnimalSchema(many=True)
+        data = animals_schema.dump(animals_list)
+        return json.dumps(data)
 
 
-@animal.route('/<int:id>', methods=['GET'])
+@animals.route('/adopted', methods=['GET'])
+def get_adopted_animals():
+    if request.method == 'GET':
+
+        animals_list = Animal.query.filter(Animal.adopted.is_not(None))
+        animals_schema = AnimalSchema(many=True)
+        data = animals_schema.dump(animals_list)
+        return json.dumps(data)
+
+@animals.route('/<int:id>', methods=['GET'])
 def get_animal(id):
     animal = Animal.query.get_or_404(id)
     if request.method == 'GET':
-        return json.dumps(animal.serialize())
+        return json.dumps(AnimalSchema().dump(animal))
 
 
-def validate_post_request(data):
-    if ('name' in data and 'age' in data and 'type' in data and 'desc' in data):
+def validate_put_request(data):
+    if 'name' in data and 'age' in data and 'type' in data and 'desc' in data and 'adopted' in data:
         return True
     return False
 
 
-@animal.route('/update/<int:id>', methods=['PUT', 'PATCH'])
+@animals.route('/update/<int:id>', methods=['PUT', 'PATCH'])
 def update(id):
     animal = Animal.query.get_or_404(id)
     data = request.json
@@ -54,20 +75,21 @@ def update(id):
 
         try:
             db.session.commit()
-            return json.dumps(animal.serialize())
+            return json.dumps(AnimalSchema().dump(animal))
         except:
             return 'Issue updating animal'
 
     if request.method == 'PUT':
-        if validate_post_request(data):
+        if validate_put_request(data):
             animal.name = data.get('name')
             animal.age = data.get('age')
             animal.type = data.get('type')
             animal.desc = data.get('desc')
+            animal.adopted = data.get('adopted')
 
             try:
                 db.session.commit()
-                return json.dumps(animal.serialize())
+                return json.dumps(AnimalSchema().dump(animal))
             except:
                 return 'Issue updating animal'
 
@@ -75,7 +97,7 @@ def update(id):
             return "400, Invalid request: Some data is missing", 400
 
 
-@animal.route('/delete/<int:id>', methods=['DELETE'])
+@animals.route('/<int:id>', methods=['DELETE'])
 def delete(id):
     animal = Animal.query.get(id)
 

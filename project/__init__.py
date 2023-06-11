@@ -1,10 +1,9 @@
 from flask import Flask
 from flask_migrate import Migrate
 
-from .extensions import db
-from .routes.animal import animal
-from .routes.main import main
-from .routes.api import api
+from .extensions import db, ma
+from .routes.animal import animals
+from .routes.user import users
 
 
 def create_app():
@@ -12,6 +11,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 
     db.init_app(app)
+    ma.init_app(app)
     # migrate.init_app(app, db)
 
     with app.app_context():
@@ -19,8 +19,7 @@ def create_app():
 
     migrate = Migrate(app,db)
 
-    app.register_blueprint(main)
-    app.register_blueprint(api, url_prefix="/api")
-    app.register_blueprint(animal, url_prefix='/animal')
+    app.register_blueprint(users,  url_prefix="/users")
+    app.register_blueprint(animals, url_prefix='/animals')
 
     return app

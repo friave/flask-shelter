@@ -1,5 +1,10 @@
 env\Scripts\activate.bat
+set FLASK_APP=project
+set FLASK_ENV=development
+
 flask run
+
+
 
 flask db migrate
 flask db upgrade

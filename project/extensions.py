@@ -1,5 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
+from flask_marshmallow import Marshmallow
+
+ma = Marshmallow()
 
 metadata = MetaData(
     naming_convention={
