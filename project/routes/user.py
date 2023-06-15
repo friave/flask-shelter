@@ -25,7 +25,8 @@ def index():
             return 'Issue adding animal'
 
     else:
-        users = User.query.all()
+        page = request.args.get('page', 1, type=int)
+        users = User.query.paginate(page=page, per_page=5)
         return json.dumps(UserSchema(many=True).dump(users))
 
 @users.route('/<int:id>', methods=['GET'])
@@ -72,18 +73,6 @@ def update_user(id):
             return "400, Invalid request: Some data is missing", 400
 
 
-@users.route('/<int:id>', methods=['DELETE'])
-def delete(id):
-    user = User.query.get(id)
-
-    try:
-        db.session.delete(user)
-        db.session.commit()
-        return 'User has been removed from users list'
-    except:
-        return 'Issue deleting task'
-
-
 @users.route('/add_animal/<int:id>', methods=['PUT', 'PATCH'])
 def add_animal(id):
     user = User.query.get_or_404(id)
@@ -102,7 +91,8 @@ def add_animal(id):
 @users.route('/<int:id>/adoptions', methods=['GET'])
 def get_adopted_animals(id):
     if request.method == 'GET':
-        animals = Animal.query.filter_by(adopted=id)
+        page = request.args.get('page', 1, type=int)
+        animals = Animal.query.filter_by(adopted=id).paginate(page=page, per_page=5)
         animals_schema = AnimalSchema(many=True)
         data = animals_schema.dump(animals)
         return json.dumps(data)
@@ -120,3 +110,56 @@ def get_adopted_animal(id, id2):
 
         return "This user doesn't have this animal"
 
+@users.route('/<int:id>/adoptions/<int:id2>', methods=['DELETE'])
+def delete_adopted_animal(id, id2):
+    if request.method == 'DELETE':
+        user = User.query.get_or_404(id)
+        animal = Animal.query.get(id2)
+        animal.adopted = None
+
+        for a in user.animals:
+            if a.id == animal.id:
+                user.animals.remove(a)
+                break
+
+        try:
+            db.session.commit()
+            return json.dumps(UserSchema().dump(user))
+        except:
+            return 'Issue deleting animal to user'
+
+
+@users.route('/<int:id>', methods=['DELETE'])
+def delete_user(id):
+    if request.method == 'DELETE':
+        user = User.query.get_or_404(id)
+
+        for a in user.animals:
+            a.adopted = None
+
+        try:
+            db.session.delete(user)
+            db.session.commit()
+            return 'User has been removed from users list'
+        except:
+            return 'Issue deleting animal to user'
+
+
+@users.route('/change_ownership/<int:id>', methods=['PATCH'])
+def change_ownership_of_animals(id):
+    if request.method == 'PATCH':
+        user = User.query.get_or_404(id)
+        data = request.json
+        user2 = User.query.get(data.get('new_owner_id'))
+
+        for a in user.animals:
+            a.adopted = user2.id
+            user2.animals.append(a)
+
+        user.animals = []
+
+        try:
+            db.session.commit()
+            return 'Changed ownership of all animals of this user'
+        except:
+            return 'Issue deleting animal to user'

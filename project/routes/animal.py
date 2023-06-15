@@ -9,7 +9,8 @@ animals = Blueprint("animals", __name__)
 @animals.route('/', methods=['GET'])
 def index():
     if request.method == 'GET':
-        animals_list = Animal.query.all()
+        page = request.args.get('page', 1, type=int)
+        animals_list = Animal.query.paginate(page=page, per_page=5)
         animals_schema = AnimalSchema(many=True)
         data = animals_schema.dump(animals_list)
         return json.dumps(data)
@@ -31,7 +32,8 @@ def add_animal():
 @animals.route('/available', methods=['GET'])
 def get_available_animals():
     if request.method == 'GET':
-        animals_list = Animal.query.filter(Animal.adopted.is_(None))
+        page = request.args.get('page', 1, type=int)
+        animals_list = Animal.query.filter(Animal.adopted.is_(None)).paginate(page=page, per_page=5)
         animals_schema = AnimalSchema(many=True)
         data = animals_schema.dump(animals_list)
         return json.dumps(data)
@@ -40,8 +42,8 @@ def get_available_animals():
 @animals.route('/adopted', methods=['GET'])
 def get_adopted_animals():
     if request.method == 'GET':
-
-        animals_list = Animal.query.filter(Animal.adopted.is_not(None))
+        page = request.args.get('page', 1, type=int)
+        animals_list = Animal.query.filter(Animal.adopted.is_not(None)).paginate(page=page, per_page=5)
         animals_schema = AnimalSchema(many=True)
         data = animals_schema.dump(animals_list)
         return json.dumps(data)
